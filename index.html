@@ -56,7 +56,7 @@ h2.title{font-family:'Fraunces',serif;font-size:clamp(30px,4vw,46px);margin:0 0 
 .item .ic{font-size:30px}
 .item h3{margin:4px 0 0;font-family:'Fraunces',serif;font-size:19px}
 .item p{margin:0;color:var(--muted);font-size:14px;flex:1}
-.row{display:flex;align-items:center;justify-content:space-between;margin-top:10px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:10px}
 .price{font-weight:700;color:var(--gold);font-size:18px}
 .add{background:transparent;border:1px solid var(--gold);color:var(--gold);border-radius:99px;padding:6px 16px;font-weight:700}
 .add:hover{background:var(--gold);color:#2a1409}
@@ -106,9 +106,9 @@ aside h3{font-family:'Fraunces',serif;font-size:24px;margin:0}
   <div>
     <span class="tag">Celebrating 16 years with a new look</span>
     <h1>Cyber’s Tea Point<em>A little sweetness in life…</em></h1>
-    <p class="lead">Fresh tea and coffee, warm waffles, desserts and crispy fries, made to order and served with a smile.</p>
+    <p class="lead">Fresh tea and coffee, thick shakes, brownies, waffles with chocolate and crispy French fries, made to order and served with a smile.</p>
     <div class="cta"><a class="btn" href="#menu">See the menu</a><button class="btn ghost" id="open2">Start an order</button></div>
-    <div class="cats">Tea · Coffee · Desserts · Fries · Breakfast · Waffle</div>
+    <div class="cats">Tea · Coffee · Shakes · Brownie · Waffle · French fries</div>
   </div>
   <div class="bday">
     <div class="crown" aria-hidden="true">👑</div>
@@ -155,25 +155,29 @@ aside h3{font-family:'Fraunces',serif;font-size:24px;margin:0}
 <div class="toast" id="toast" role="status"></div>
 
 <script>
+const W=(n,h,f,d)=>[n,d||"Half or full portion, made fresh to order",[["Half",h],["Full",f]]];
 const MENU={
- "Tea":{i:"🍵",d:[["Masala chai","Spiced, strong and milky",30],["Ginger tea","Fresh ginger, a gentle kick",30],["Lemon tea","Light, bright and soothing",35],["Matka chai","Served in a clay cup",40],["Iced peach tea","Cold, fruity, refreshing",80]]},
- "Coffee":{i:"☕",d:[["Hot coffee","Classic, frothy and smooth",50],["Cold coffee","Thick, chilled and creamy",90],["Cappuccino","Espresso with silky foam",100],["Hazelnut latte","Nutty and mellow",120],["Mocha","Coffee meets chocolate",130]]},
- "Desserts":{i:"🍰",d:[["Fudgy brownie","Dense, dark and gooey",90],["Chocolate pastry","Soft layers, rich cream",80],["Choco lava cake","Molten centre, served warm",110],["Brownie sundae","Brownie, ice cream, fudge",150]]},
- "Fries":{i:"🍟",d:[["Salted fries","Golden and crisp",90],["Peri peri fries","Spicy and tangy",110],["Cheesy fries","Hot cheese sauce on top",130],["Loaded fries","Cheese, sauces and herbs",160]]},
- "Breakfast":{i:"🥪",d:[["Bun maska","Soft bun, fresh butter",50],["Omelette toast","Two eggs, buttered toast",70],["Veg grilled sandwich","Toasted with fresh veggies",90],["Egg sandwich","Soft egg, green chutney",80],["Masala maggi","Quick, hot and spicy",70]]},
- "Waffle":{i:"🧇",d:[["Honey butter waffle","Crisp outside, soft inside",110],["Classic choco waffle","Chocolate sauce and chips",120],["Hazelnut spread waffle","Loaded with spread",150],["Waffle sundae","Waffle, ice cream, syrup",170]]}
+ "Tea":{i:"🍵",d:[["Tea","Hot, fresh and milky",[["Small",15],["Large",25]]],["Authentic liquor tea","Strong, clear and aromatic",20]]},
+ "Coffee":{i:"☕",d:[["Coffee","Hot and frothy",40],["Cold coffee","Thick, chilled and creamy",100]]},
+ "Shakes":{i:"🥤",d:[["Vanilla shake","Smooth and creamy",100],["Strawberry shake","Sweet and fruity",100],["Chocolate shake","Rich and chocolatey",100],["Oreo shake","Crunchy Oreo blended in",120]]},
+ "Brownie":{i:"🍫",d:[["Brownie with ice cream","Warm brownie, ice cream and chocolate sauce",99]]},
+ "Waffle":{i:"🧇",d:[W("Brownie waffle with ice cream",99,199),W("Red velvet waffle",99,199),W("Butter waffle",49,99),W("Nutella waffle",129,249),W("Crispy waffle",99,190),W("Dark chocolate waffle",99,199),W("White chocolate waffle",99,199),W("Milk chocolate waffle",99,199),W("Triple chocolate waffle",129,249),W("Double chocolate waffle",99,199)]},
+ "French Fries":{i:"🍟",d:[["French fries","Hot, golden and crisp, with ketchup",59]]}
 };
 const $=s=>document.querySelector(s);
 const cart={};let cur="Tea";
 const tabs=$("#tabs"),grid=$("#grid");
 Object.keys(MENU).forEach(k=>{const b=document.createElement("button");b.className="tab";b.role="tab";b.textContent=k;b.onclick=()=>{cur=k;draw()};tabs.append(b)});
+function add(n,p){cart[n]=cart[n]||{p,q:0};cart[n].q++;render();toast(n+" added")}
 function draw(){
   [...tabs.children].forEach(b=>b.setAttribute("aria-selected",b.textContent===cur));
   grid.innerHTML="";
   MENU[cur].d.forEach(([n,t,p])=>{
     const a=document.createElement("article");a.className="item";
-    a.innerHTML=`<div class="ic" aria-hidden="true">${MENU[cur].i}</div><h3>${n}</h3><p>${t}</p><div class="row"><span class="price">₹${p}</span><button class="add" aria-label="Add ${n}">Add</button></div>`;
-    a.querySelector(".add").onclick=()=>{cart[n]=cart[n]||{p,q:0};cart[n].q++;render();toast(n+" added")};
+    a.innerHTML=`<div class="ic" aria-hidden="true">${MENU[cur].i}</div><h3>${n}</h3><p>${t}</p><div class="row"></div>`;
+    const r=a.querySelector(".row");
+    if(Array.isArray(p)){p.forEach(([l,v])=>{const b=document.createElement("button");b.className="add";b.innerHTML=`${l} ₹${v}`;b.setAttribute("aria-label","Add "+n+", "+l);b.onclick=()=>add(n+" ("+l+")",v);r.append(b)})}
+    else{r.innerHTML=`<span class="price">₹${p}</span>`;const b=document.createElement("button");b.className="add";b.textContent="Add";b.setAttribute("aria-label","Add "+n);b.onclick=()=>add(n,p);r.append(b)}
     grid.append(a);
   });
 }
