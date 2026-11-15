@@ -122,7 +122,7 @@ aside h3{font-family:'Fraunces',serif;font-size:24px;margin:0}
 
 <section id="menu"><div class="wrap">
   <h2 class="title">Eat. Drink. Celebrate.</h2>
-  <p class="sub">Pick a category, add what you like, and send your order to us on WhatsApp.</p>
+  <p class="sub">Pick a category, add what you like, and place your order. We’ll confirm by phone.</p>
   <div class="tabs" role="tablist" id="tabs"></div>
   <div class="grid" id="grid"></div>
 </div></section>
@@ -142,15 +142,15 @@ aside h3{font-family:'Fraunces',serif;font-size:24px;margin:0}
   <div class="cta" style="justify-content:center"><a class="btn" href="https://wa.me/919007583583" target="_blank" rel="noopener">Chat on WhatsApp</a></div>
 </div></section>
 
-<footer><div class="wrap">© 2026 Cyber’s Tea Point · A little sweetness in life…</div></footer>
+<footer><div class="wrap">© 2026 Cyber’s Tea Point · A little sweetness in life… · <a href="/admin">Admin</a></div></footer>
 
 <button id="fab" aria-label="Open your order">Your order · <span id="n">0</span></button>
 <aside id="cart" aria-label="Your order">
   <header><h3>Your order</h3><button class="x" id="close" aria-label="Close order">×</button></header>
   <div id="lines"></div>
   <div class="total"><span>Total</span><span id="tot">₹0</span></div>
-  <input class="name" id="who" placeholder="Your name" autocomplete="name">
-  <button class="btn send" id="send" disabled>Send order on WhatsApp</button>
+  <input class="name" id="who" placeholder="Your name" autocomplete="name"><input class="name" id="ph" type="tel" inputmode="numeric" placeholder="Phone number (10 digits)" autocomplete="tel"><input class="name" id="note" placeholder="Note (optional)">
+  <button class="btn send" id="send" disabled>Place order</button>
 </aside>
 <div class="toast" id="toast" role="status"></div>
 
@@ -196,12 +196,16 @@ function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clea
 const open=()=>$("#cart").classList.add("open"),close=()=>$("#cart").classList.remove("open");
 $("#fab").onclick=open;$("#open2").onclick=open;$("#close").onclick=close;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
-$("#send").onclick=()=>{
-  const ks=Object.keys(cart).filter(k=>cart[k].q>0);let tot=0;
-  const lines=ks.map(k=>{tot+=cart[k].p*cart[k].q;return `• ${k} × ${cart[k].q} = ₹${cart[k].p*cart[k].q}`});
-  const who=$("#who").value.trim()||"a customer";
-  const msg=`Hi Cyber’s Tea Point! New order from ${who}:\n${lines.join("\n")}\nTotal: ₹${tot}`;
-  window.open("https://wa.me/919007583583?text="+encodeURIComponent(msg),"_blank");
+$("#send").onclick=async()=>{
+  const items=Object.keys(cart).filter(k=>cart[k].q>0).map(k=>({name:k,qty:cart[k].q,price:cart[k].p}));
+  const b=$("#send");b.disabled=true;b.textContent="Placing order…";
+  try{
+    const r=await fetch("/api/order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("#who").value,phone:$("#ph").value,note:$("#note").value,items})});
+    const j=await r.json();
+    if(!r.ok){toast(j.error||"Something went wrong");b.disabled=false}
+    else{Object.keys(cart).forEach(k=>delete cart[k]);render();close();toast("Order #"+j.id+" placed! We’ll call you soon.")}
+  }catch(e){toast("Network error. Please try again.");b.disabled=false}
+  b.textContent="Place order";
 };
 /* countdown to 7pm on 15 Nov 2026 */
 const T=new Date(2026,10,15,19,0,0);
