@@ -98,7 +98,7 @@ aside h3{font-family:'Fraunces',serif;font-size:24px;margin:0}
 <body>
 <nav><div class="wrap">
   <a class="logo" href="#top" aria-label="Cyber’s Tea Point home"><svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="#e8b73a" stroke-width="1.8" stroke-linecap="round"><path d="M5 14h18v4a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8z"/><path d="M23 15h2.5a3 3 0 0 1 0 6H22"/><path d="M11 4c-2 2 2 3 0 6M16 4c-2 2 2 3 0 6M21 4c-2 2 2 3 0 6"/></svg>Cyber’s</a>
-  <div class="links"><a href="#menu">Menu</a><a href="#story">Our story</a><a href="#visit">Visit</a></div>
+  <div class="links"><a href="#menu">Menu</a><a href="/cakes">Cakes</a><a href="#story">Our story</a><a href="#visit">Visit</a></div>
   <a class="call" href="tel:+919007583583">Call 9007 583 583</a>
 </div></nav>
 
@@ -106,9 +106,9 @@ aside h3{font-family:'Fraunces',serif;font-size:24px;margin:0}
   <div>
     <span class="tag">Celebrating 16 years with a new look</span>
     <h1>Cyber’s Tea Point<em>A little sweetness in life…</em></h1>
-    <p class="lead">Fresh tea and coffee, thick shakes, brownies, waffles with chocolate and crispy French fries, made to order and served with a smile.</p>
+    <p class="lead">Fresh tea, thick shakes, brownies, chocolate waffles, crispy fries and cakes made fresh to order, all served with a smile.</p>
     <div class="cta"><a class="btn" href="#menu">See the menu</a><button class="btn ghost" id="open2">Start an order</button></div>
-    <div class="cats">Tea · Coffee · Shakes · Brownie · Waffle · French fries</div>
+    <div class="cats">Tea · Breakfast · Desserts · Shakes · Waffles · Appetizers · Cakes</div>
   </div>
   <div class="bday">
     <div class="crown" aria-hidden="true">👑</div>
@@ -131,7 +131,7 @@ aside h3{font-family:'Fraunces',serif;font-size:24px;margin:0}
   <q>Every cup has a story, and every story deserves something sweet.</q>
   <div>
     <p style="color:var(--muted);font-size:18px;margin-top:0">Cyber’s started as a small corner for tea and conversation. Sixteen years later, it’s still the place where friends meet, students study and families stop by for dessert.</p>
-    <div class="stats"><div><b>16</b><span>years of chai</span></div><div><b>6</b><span>menu categories</span></div><div><b>7pm</b><span>tonight’s opening</span></div></div>
+    <div class="stats"><div><b>16</b><span>years of chai</span></div><div><b>7</b><span>menu categories</span></div><div><b>7pm</b><span>tonight’s opening</span></div></div>
   </div>
 </div></section>
 
@@ -139,10 +139,10 @@ aside h3{font-family:'Fraunces',serif;font-size:24px;margin:0}
   <h2 class="title">Come say hello</h2>
   <p class="sub">Call or message us to reserve a table or place an order.</p>
   <a class="big" href="tel:+919007583583">9007 583 583</a>
-  <div class="cta" style="justify-content:center"><a class="btn" href="https://wa.me/919007583583" target="_blank" rel="noopener">Chat on WhatsApp</a></div>
+  <div class="cta" style="justify-content:center"><a class="btn" href="https://share.google/Ms0l0a1MWMtX194qu" target="_blank" rel="noopener">📍 Find us on Google Maps</a><a class="btn ghost" href="/cakes">Order a cake</a><a class="btn" href="https://wa.me/919007583583" target="_blank" rel="noopener">Chat on WhatsApp</a></div>
 </div></section>
 
-<footer><div class="wrap">© 2026 Cyber’s Tea Point · A little sweetness in life… · <a href="/admin">Admin</a></div></footer>
+<footer><div class="wrap">© 2026 Cyber’s Tea Point · A little sweetness in life… · <a href="https://share.google/Ms0l0a1MWMtX194qu" target="_blank" rel="noopener">Google Maps</a> · <a href="/admin">Admin</a></div></footer>
 
 <button id="fab" aria-label="Open your order">Your order · <span id="n">0</span></button>
 <aside id="cart" aria-label="Your order">
@@ -155,19 +155,20 @@ aside h3{font-family:'Fraunces',serif;font-size:24px;margin:0}
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-const W=(n,h,f,d)=>[n,d||"Half or full portion, made fresh to order",[["Half",h],["Full",f]]];
+const W=(n,h,f)=>[n,"Half or full portion, made fresh to order",[["Half",h],["Full",f]]];
 const MENU={
- "Tea":{i:"🍵",d:[["Tea","Hot, fresh and milky",[["Small",15],["Large",25]]],["Authentic liquor tea","Strong, clear and aromatic",20]]},
- "Coffee":{i:"☕",d:[["Coffee","Hot and frothy",40],["Cold coffee","Thick, chilled and creamy",100]]},
- "Shakes":{i:"🥤",d:[["Vanilla shake","Smooth and creamy",100],["Strawberry shake","Sweet and fruity",100],["Chocolate shake","Rich and chocolatey",100],["Oreo shake","Crunchy Oreo blended in",120]]},
- "Brownie":{i:"🍫",d:[["Brownie with ice cream","Warm brownie, ice cream and chocolate sauce",99]]},
- "Waffle":{i:"🧇",d:[W("Brownie waffle with ice cream",99,199),W("Red velvet waffle",99,199),W("Butter waffle",49,99),W("Nutella waffle",129,249),W("Crispy waffle",99,190),W("Dark chocolate waffle",99,199),W("White chocolate waffle",99,199),W("Milk chocolate waffle",99,199),W("Triple chocolate waffle",129,249),W("Double chocolate waffle",99,199)]},
- "French Fries":{i:"🍟",d:[["French fries","Hot, golden and crisp, with ketchup",59]]}
+ "Tea":{i:"🍵",d:[["Tea","Hot, fresh and milky",[["Small",15],["Large",25]]],["Malai Tea","Rich tea with fresh malai",40],["Authentic liquor tea","Strong, clear and aromatic",20],["Cappuccino","Frothy and smooth",40]]},
+ "Breakfast":{i:"🍞",d:[["Butter Toast","Crisp toast with butter",45],["Malai Toast","Toast with creamy malai",65],["Maggie","Hot masala noodles",50],["Cheese Maggie","Maggie topped with melted cheese",70]]},
+ "Desserts":{i:"🍰",d:[["Brownie with ice cream","Warm brownie, ice cream and chocolate sauce",139]]},
+ "Shakes":{i:"🥤",d:[["Vanilla shake","Smooth and creamy",100],["Strawberry shake","Sweet and fruity",100],["Cold coffee","Thick, chilled and creamy",100],["Chocolate shake","Rich and chocolatey",100],["Oreo shake","Crunchy Oreo blended in",120]]},
+ "Waffles":{i:"🧇",d:[W("Brownie waffle with ice cream",99,179),W("Red velvet waffle",99,189),W("Butter waffle",69,119),W("Nutella waffle",129,239),W("Crispy waffle",99,180),W("Dark chocolate waffle",99,189),W("White chocolate waffle",99,189),W("Milk chocolate waffle",99,189),W("Triple chocolate waffle",129,239),W("Double chocolate waffle",99,189)]},
+ "Appetizer":{i:"🍟",d:[["French fries","Hot, golden and crisp, with ketchup",[["Small",59],["Large",89]]],["Chicken fingers (5 pc)","Crispy fried chicken fingers",139],["Veg sandwich","Fresh veggies, toasted",79]]}
 };
 const $=s=>document.querySelector(s);
 const cart={};let cur="Tea";
 const tabs=$("#tabs"),grid=$("#grid");
 Object.keys(MENU).forEach(k=>{const b=document.createElement("button");b.className="tab";b.role="tab";b.textContent=k;b.onclick=()=>{cur=k;draw()};tabs.append(b)});
+const ck=document.createElement("a");ck.className="tab";ck.href="/cakes";ck.style.display="inline-block";ck.textContent="Cakes (by order) →";tabs.append(ck);
 function add(n,p){cart[n]=cart[n]||{p,q:0};cart[n].q++;render();toast(n+" added")}
 function draw(){
   [...tabs.children].forEach(b=>b.setAttribute("aria-selected",b.textContent===cur));
