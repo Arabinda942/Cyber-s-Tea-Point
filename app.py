@@ -43,6 +43,10 @@ def login_required(f):
 def index():
     return send_file("index.html")
 
+@app.get("/cakes")
+def cakes():
+    return send_file("cakes.html")
+
 @app.post("/api/order")
 def api_order():
     d = request.get_json(silent=True) or {}
