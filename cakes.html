@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cakes – Cyber’s Tea Point</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Figtree:wght@400;500;600;700&family=Kaushan+Script&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1d0e08;--bg2:#2a1409;--card:#35190d;--line:#5a3320;--gold:#e8b73a;--cream:#fbf1dc;--muted:#c9ad92;color-scheme:dark;box-sizing:border-box}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--cream);font-family:'Figtree',system-ui,sans-serif;line-height:1.6;padding-bottom:env(safe-area-inset-bottom,0px)}
+a{color:inherit;text-decoration:none}button,input,textarea{font:inherit;color:inherit}button{cursor:pointer}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+nav{border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+nav .wrap{display:flex;justify-content:space-between;align-items:center;height:60px}
+.logo{font-family:'Kaushan Script',cursive;font-size:26px;color:var(--gold)}
+.back{color:var(--muted);font-size:14px}.back:hover{color:var(--gold)}
+header{padding:48px 0 24px;text-align:center;background:radial-gradient(700px 300px at 50% 0,#4a2412,transparent 70%)}
+h1{font-family:'Fraunces',serif;font-size:clamp(36px,6vw,64px);margin:0;letter-spacing:-1px}
+h1 em{display:block;font-family:'Kaushan Script',cursive;font-style:normal;font-weight:400;color:var(--gold);font-size:.55em;letter-spacing:0}
+.pills{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.pills span{border:1px solid var(--gold);color:var(--gold);border-radius:99px;padding:5px 14px;font-size:13px;font-weight:600}
+h2{font-family:'Fraunces',serif;font-size:26px;margin:36px 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.cake{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.cake .ic{font-size:30px}.cake b{font-family:'Fraunces',serif;font-size:17px;margin-top:4px}.cake small{color:var(--muted)}
+.cake .pr{color:var(--gold);font-weight:700;font-size:20px;margin-top:6px}
+.cake[aria-pressed=true]{border-color:var(--gold);background:#4a2412;box-shadow:0 0 0 2px var(--gold)}
+.form{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:22px;display:grid;gap:12px;margin-bottom:60px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:560px){.two{grid-template-columns:1fr}}
+label{font-size:13px;color:var(--muted);display:grid;gap:4px}
+input,textarea{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px;width:100%}
+.chk{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--cream)}.chk input{width:auto}
+.qty{display:flex;align-items:center;gap:10px}.qty button{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--card)}
+.sum{display:flex;justify-content:space-between;font-size:20px;font-weight:700;border-top:1px solid var(--line);padding-top:12px}
+.sum span:last-child{color:var(--gold)}
+.btn{border:0;border-radius:99px;padding:14px 24px;font-weight:700;font-size:16px;background:var(--gold);color:#2a1409}.btn[disabled]{opacity:.5}
+#msg{color:#f08a8a;min-height:22px;margin:0}
+.done{text-align:center;padding:30px 10px}.done h3{font-family:'Fraunces',serif;font-size:28px;color:var(--gold);margin:0 0 8px}
+</style>
+</head>
+<body>
+<nav><div class="wrap"><a class="logo" href="/">Cyber’s</a><a class="back" href="/">← Back to main menu</a></div></nav>
+<header><div class="wrap">
+  <h1>Cakes<em>1 pound · made fresh to order</em></h1>
+  <div class="pills"><span>Normal cake designs available</span><span>₹150 delivery charge extra</span></div>
+</div></header>
+<main class="wrap">
+  <h2>1. Choose your cake</h2>
+  <div class="grid" id="grid"></div>
+  <h2>2. Your details</h2>
+  <div class="form" id="form">
+    <div class="two"><label>Your name<input id="nm" autocomplete="name"></label><label>Phone number<input id="ph" type="tel" inputmode="numeric" placeholder="10 digits" autocomplete="tel"></label></div>
+    <div class="two"><label>Date you need the cake<input id="dt" type="date"></label>
+      <label>Quantity<div class="qty"><button type="button" id="m" aria-label="Fewer">−</button><b id="q">1</b><button type="button" id="p" aria-label="More">+</button></div></label></div>
+    <label>Message on the cake (optional)<input id="txt" maxlength="60" placeholder="e.g. Happy Birthday Riya"></label>
+    <label class="chk"><input type="checkbox" id="del"> Home delivery (+₹150)</label>
+    <label id="aw" hidden>Delivery address<textarea id="addr" rows="2" maxlength="110"></textarea></label>
+    <div class="sum"><span id="lbl">Choose a cake</span><span id="tot">₹0</span></div>
+    <p id="msg" role="alert"></p>
+    <button class="btn" id="go">Place cake order</button>
+  </div>
+</main>
+<script>
+const CAKES=[["Chocolate Cake",550,"🍫"],["Strawberry Cake",500,"🍓"],["Pure Chocolate Cake",650,"🍫"],["Black Forest Cake",600,"🍒"],["Red Velvet Cake",900,"❤️"],["Butterscotch Cake",500,"🍮"],["Mango Cake",500,"🥭"],["Plain Cake",200,"🎂"],["Fruit Cake",300,"🍇"],["Chocolate Plain Cake",250,"🎂"]];
+const $=i=>document.getElementById(i);let sel=null,qty=1;
+CAKES.forEach(([n,p,e],i)=>{const b=document.createElement("button");b.className="cake";b.type="button";b.setAttribute("aria-pressed","false");
+  b.innerHTML=`<span class="ic" aria-hidden="true">${e}</span><b>${n}</b><small>1 pound</small><span class="pr">₹${p}</span>`;
+  b.onclick=()=>{sel=i;upd()};$("grid").append(b)});
+$("dt").min=new Date().toLocaleDateString("en-CA");
+function upd(){
+  [...$("grid").children].forEach((b,i)=>b.setAttribute("aria-pressed",i===sel));
+  $("q").textContent=qty;$("aw").hidden=!$("del").checked;
+  const t=sel===null?0:CAKES[sel][1]*qty+($("del").checked?150:0);
+  $("lbl").textContent=sel===null?"Choose a cake":CAKES[sel][0]+" × "+qty+($("del").checked?" + delivery":"");
+  $("tot").textContent="₹"+t;
+}
+$("m").onclick=()=>{qty=Math.max(1,qty-1);upd()};$("p").onclick=()=>{qty=Math.min(5,qty+1);upd()};$("del").onchange=upd;
+const err=t=>{$("msg").textContent=t};
+$("go").onclick=async()=>{
+  err("");
+  if(sel===null)return err("Please choose a cake.");
+  if(!$("nm").value.trim())return err("Please enter your name.");
+  if($("ph").value.replace(/\D/g,"").length<10)return err("Please enter a 10-digit phone number.");
+  if(!$("dt").value)return err("Please choose the date you need the cake.");
+  const del=$("del").checked,addr=$("addr").value.trim();
+  if(del&&!addr)return err("Please enter the delivery address.");
+  const items=[{name:CAKES[sel][0]+" (1 lb)",qty,price:CAKES[sel][1]}];if(del)items.push({name:"Delivery charge",qty:1,price:150});
+  const msg=$("txt").value.trim();
+  const note=("CAKE ORDER · Needed on "+$("dt").value.split("-").reverse().join("-")+(del?" · Delivery: "+addr:" · Pickup")+(msg?" · Message: "+msg:"")).slice(0,300);
+  const b=$("go");b.disabled=true;b.textContent="Placing order…";
+  try{
+    const r=await fetch("/api/order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("nm").value,phone:$("ph").value,note,items})});
+    const j=await r.json();
+    if(!r.ok){err(j.error||"Something went wrong.");b.disabled=false;b.textContent="Place cake order";return}
+    $("form").innerHTML=`<div class="done"><h3>Order #${j.id} placed!</h3><p>Thank you, we’ll call you shortly to confirm your cake and the design.</p><a class="btn" href="/">Back to menu</a></div>`;
+  }catch(e){err("Network error. Please try again.");b.disabled=false;b.textContent="Place cake order"}
+};
+upd();
+</script>
+</body>
+</html>
