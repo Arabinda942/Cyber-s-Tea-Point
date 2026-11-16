@@ -43,12 +43,28 @@ def login_required(f):
 def index():
     return send_file("index.html")
 
+@app.after_request
+def cors(r):
+    if request.path.startswith("/api/"):
+        r.headers["Access-Control-Allow-Origin"] = "*"
+        r.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        r.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    return r
+
+@app.errorhandler(500)
+def err500(e):
+    if request.path.startswith("/api/"):
+        return jsonify(error="Server error. Please try again in a moment."), 500
+    return "Server error", 500
+
 @app.get("/cakes")
 def cakes():
     return send_file("cakes.html")
 
-@app.post("/api/order")
+@app.route("/api/order", methods=["POST", "OPTIONS"])
 def api_order():
+    if request.method == "OPTIONS":
+        return "", 204
     d = request.get_json(silent=True) or {}
     name = str(d.get("name", "")).strip()[:80]
     phone = "".join(c for c in str(d.get("phone", "")) if c.isdigit())[-10:]

@@ -64,6 +64,7 @@ input,textarea{background:var(--card);border:1px solid var(--line);border-radius
 </main>
 <script>
 const CAKES=[["Chocolate Cake",550,"🍫"],["Strawberry Cake",500,"🍓"],["Pure Chocolate Cake",650,"🍫"],["Black Forest Cake",600,"🍒"],["Red Velvet Cake",900,"❤️"],["Butterscotch Cake",500,"🍮"],["Mango Cake",500,"🥭"],["Plain Cake",200,"🎂"],["Fruit Cake",300,"🍇"],["Chocolate Plain Cake",250,"🎂"]];
+const API=["localhost","127.0.0.1"].includes(location.hostname)?"":"https://cyber-s-tea-point-backend.onrender.com";
 const $=i=>document.getElementById(i);let sel=null,qty=1;
 CAKES.forEach(([n,p,e],i)=>{const b=document.createElement("button");b.className="cake";b.type="button";b.setAttribute("aria-pressed","false");
   b.innerHTML=`<span class="ic" aria-hidden="true">${e}</span><b>${n}</b><small>1 pound</small><span class="pr">₹${p}</span>`;
@@ -91,8 +92,8 @@ $("go").onclick=async()=>{
   const note=("CAKE ORDER · Needed on "+$("dt").value.split("-").reverse().join("-")+(del?" · Delivery: "+addr:" · Pickup")+(msg?" · Message: "+msg:"")).slice(0,300);
   const b=$("go");b.disabled=true;b.textContent="Placing order…";
   try{
-    const r=await fetch("/api/order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("nm").value,phone:$("ph").value,note,items})});
-    const j=await r.json();
+    const r=await fetch(API+"/api/order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("nm").value,phone:$("ph").value,note,items})});
+    const j=await r.json().catch(()=>({error:"Server error ("+r.status+"). Please try again in a minute."}));
     if(!r.ok){err(j.error||"Something went wrong.");b.disabled=false;b.textContent="Place cake order";return}
     $("form").innerHTML=`<div class="done"><h3>Order #${j.id} placed!</h3><p>Thank you, we’ll call you shortly to confirm your cake and the design.</p><a class="btn" href="/">Back to menu</a></div>`;
   }catch(e){err("Network error. Please try again.");b.disabled=false;b.textContent="Place cake order"}
