@@ -1,11 +1,12 @@
-import os, io, re, hmac
+import os, io, re, json, hmac, threading, urllib.request
 from datetime import datetime, date, timedelta
 from functools import wraps
 from zoneinfo import ZoneInfo
 from flask import Flask, request, session, redirect, jsonify, send_file, render_template_string
 from flask_sqlalchemy import SQLAlchemy
 from PIL import Image, ImageDraw, ImageFont
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
+from sqlalchemy import text
 from openpyxl.styles import Font, PatternFill
 
 app = Flask(__name__)
@@ -16,6 +17,8 @@ if db_url.startswith("postgres://"):
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 db = SQLAlchemy(app)
 IST = ZoneInfo("Asia/Kolkata")
+def tok(s):
+    return hmac.new(app.secret_key.encode(), s.encode(), "sha256").hexdigest()[:24]
 def now(): return datetime.now(IST).replace(tzinfo=None)
 
 class Order(db.Model):
@@ -57,9 +60,45 @@ def err500(e):
         return jsonify(error="Server error. Please try again in a moment."), 500
     return "Server error", 500
 
+@app.get("/health")
+def health():
+    return "ok"
+
 @app.get("/cakes")
 def cakes():
     return send_file("cakes.html")
+
+def wa_send(oid, name, phone, base):
+    """Auto-send the bill via WhatsApp Cloud API. Does nothing unless WA_* env vars are set."""
+    tk, pid, tpl = (os.environ.get(k) for k in ("WA_TOKEN", "WA_PHONE_ID", "WA_TEMPLATE"))
+    if not (tk and pid and tpl):
+        return
+    body = {"messaging_product": "whatsapp", "to": "91" + phone, "type": "template",
+            "template": {"name": tpl, "language": {"code": os.environ.get("WA_LANG", "en")}, "components": [
+                {"type": "header", "parameters": [{"type": "image", "image": {"link": f"{base}/bill/{oid}/{tok('b' + str(oid))}.png"}}]},
+                {"type": "body", "parameters": [{"type": "text", "text": name}]}]}}
+    try:
+        rq = urllib.request.Request(f"https://graph.facebook.com/v21.0/{pid}/messages", json.dumps(body).encode(),
+                                    {"Authorization": "Bearer " + tk, "Content-Type": "application/json"})
+        urllib.request.urlopen(rq, timeout=20).read()
+    except Exception as e:
+        app.logger.warning("WhatsApp send failed: %s", e)
+
+@app.route("/api/my-orders", methods=["POST", "OPTIONS"])
+def my_orders():
+    if request.method == "OPTIONS":
+        return "", 204
+    d = request.get_json(silent=True) or {}
+    phone = "".join(c for c in str(d.get("phone", "")) if c.isdigit())[-10:]
+    if len(phone) != 10 or not hmac.compare_digest(str(d.get("token", "")), tok("p" + phone)):
+        return jsonify(error="Not allowed"), 403
+    rows = Order.query.filter_by(phone=phone).order_by(Order.created.desc()).limit(30).all()
+    return jsonify(orders=[dict(id=o.id, date=o.created.strftime("%d %b %Y, %I:%M %p"), items=(o.items or "").split("\n"),
+                                total=o.total, status=o.status, bill=f"/bill/{o.id}/{tok('b' + str(o.id))}.png") for o in rows])
+
+@app.get("/profile.js")
+def profile_js():
+    return send_file("profile.js", mimetype="application/javascript")
 
 @app.route("/api/order", methods=["POST", "OPTIONS"])
 def api_order():
@@ -82,7 +121,10 @@ def api_order():
         return jsonify(error="Your order is empty."), 400
     o = Order(name=name, phone=phone, note=str(d.get("note", ""))[:300], items="\n".join(lines), total=total)
     db.session.add(o); db.session.commit()
-    return jsonify(ok=True, id=o.id)
+    base = request.host_url.rstrip("/")
+    threading.Thread(target=wa_send, args=(o.id, name, phone, base), daemon=True).start()
+    return jsonify(ok=True, id=o.id, name=name, phone=phone, ptoken=tok("p" + phone),
+                   bill=f"/bill/{o.id}/{tok('b' + str(o.id))}.png")
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def login():
@@ -113,7 +155,13 @@ def admin():
         .order_by(Order.created.desc()).all()
     total = sum(o.total for o in rows if o.status != "Cancelled")
     new = sum(1 for o in rows if o.status == "New")
-    return render_template_string(ADMIN, rows=rows, day=day.isoformat(), total=total, new=new)
+    dd = {}
+    for c, tt, ss in Order.query.with_entities(Order.created, Order.total, Order.status).all():
+        if ss != "Cancelled":
+            v = dd.setdefault(c.date(), [0, 0]); v[0] += 1; v[1] += tt
+    alld = [(k.isoformat(), k.strftime("%d %b"), v[0], v[1]) for k, v in sorted(dd.items(), reverse=True)[:60]]
+    return render_template_string(ADMIN, rows=rows, day=day.isoformat(), total=total, new=new, alld=alld,
+                                 msg=request.args.get("msg", ""))
 
 @app.post("/admin/status/<int:oid>")
 @login_required
@@ -122,6 +170,43 @@ def status(oid):
     if o and request.form.get("s") in ("New", "Preparing", "Done", "Cancelled"):
         o.status = request.form["s"]; db.session.commit()
     return redirect("/admin?date=" + request.form.get("day", ""))
+
+def _cell_date(v, fmt):
+    return v.strftime(fmt) if hasattr(v, "strftime") else str(v).strip()
+
+@app.post("/admin/import")
+@login_required
+def import_xlsx():
+    f = request.files.get("file")
+    added = skipped = 0
+    try:
+        wb = load_workbook(f, read_only=True, data_only=True)
+        ws = wb["All Orders"] if "All Orders" in wb.sheetnames else wb.worksheets[0]
+        for r in ws.iter_rows(min_row=2, values_only=True):
+            if not r or r[0] is None:
+                continue
+            try:
+                oid = int(r[0])
+                created = datetime.strptime(_cell_date(r[1], "%d-%m-%Y") + " " + _cell_date(r[2], "%I:%M %p"), "%d-%m-%Y %I:%M %p")
+                total = int(r[6] or 0)
+            except (ValueError, TypeError):
+                skipped += 1; continue
+            phone = str(r[4] or "")[:15]
+            if Order.query.filter_by(created=created, phone=phone, total=total).first():
+                skipped += 1; continue
+            o = Order(created=created, name=str(r[3] or "")[:80], phone=phone, total=total,
+                      items=str(r[5] or "").replace("; ", "\n"), status=str(r[7] or "New")[:20], note=str(r[8] or "")[:300])
+            if not db.session.get(Order, oid):
+                o.id = oid
+            db.session.add(o); db.session.flush(); added += 1
+        db.session.commit()
+        if db.engine.dialect.name == "postgresql":
+            db.session.execute(text("SELECT setval(pg_get_serial_sequence('\"order\"', 'id'), (SELECT COALESCE(MAX(id), 1) FROM \"order\"))"))
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return redirect("/admin?msg=Could+not+read+that+file.+Upload+the+Excel+you+downloaded+from+this+admin.")
+    return redirect(f"/admin?msg=Restored+{added}+old+orders+({skipped}+skipped+as+already+present)")
 
 @app.get("/admin/export")
 @login_required
@@ -138,11 +223,12 @@ def export():
             pass
     wb = Workbook(); ws = wb.active; ws.title = "All Orders"
     ws.append(["Order #", "Date", "Time", "Name", "Phone", "Items", "Total (Rs)", "Status", "Note"])
-    days = {}
+    days = {}; byday = {}
     for o in q.all():
         dk = o.created.strftime("%d-%m-%Y")
-        ws.append([o.id, dk, o.created.strftime("%I:%M %p"), o.name, str(o.phone), o.items.replace("\n", "; "),
-                   o.total, o.status, o.note or ""])
+        row = [o.id, dk, o.created.strftime("%I:%M %p"), o.name, str(o.phone), o.items.replace("\n", "; "),
+               o.total, o.status, o.note or ""]
+        ws.append(row); byday.setdefault(dk, []).append(row)
         if o.status != "Cancelled":
             c = days.setdefault(dk, [0, 0]); c[0] += 1; c[1] += o.total
     for c in ws[1]:
@@ -155,6 +241,13 @@ def export():
     for k, v in days.items(): s.append([k, *v])
     s.append(["TOTAL", sum(v[0] for v in days.values()), sum(v[1] for v in days.values())])
     for c in s[1]: c.font = Font(bold=True)
+    if not request.args.get("date"):
+        head = [c.value for c in ws[1]]
+        for dk, rs in byday.items():
+            sh = wb.create_sheet(dk); sh.append(head)
+            for r in rs: sh.append(r)
+            for c in sh[1]: c.font = Font(bold=True)
+            sh.column_dimensions["F"].width = 60
     buf = io.BytesIO(); wb.save(buf); buf.seek(0)
     return send_file(buf, as_attachment=True, download_name=f"cybers-orders-{label}.xlsx",
                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -173,11 +266,7 @@ def parse_items(o):
         out.append((m[1], int(m[2]), int(m[3]) if m[3] else None) if m else (ln, 1, None))
     return out
 
-@app.get("/admin/bill/<int:oid>.png")
-@login_required
-def bill(oid):
-    o = db.session.get(Order, oid)
-    if not o: return "Not found", 404
+def make_bill(o):
     items = parse_items(o)
     W, H = 800, 270 + 150 + 62 * len(items) + 330
     BR, GO, CR, MU = "#2a1409", "#e8b73a", "#fbf1dc", "#7a5a45"
@@ -219,8 +308,24 @@ def bill(oid):
     ctext(y + 56, "Eat  ·  Drink  ·  Celebrate", font(26), MU)
     ctext(y + 104, "Cyber’s Tea Point", font(22, True), GO)
     buf = io.BytesIO(); im.save(buf, "PNG"); buf.seek(0)
-    return send_file(buf, mimetype="image/png", as_attachment=bool(request.args.get("dl")),
+    return buf
+
+def _bill_resp(o):
+    return send_file(make_bill(o), mimetype="image/png", as_attachment=bool(request.args.get("dl")),
                      download_name=f"cybers-bill-{o.id:04d}.png")
+
+@app.get("/admin/bill/<int:oid>.png")
+@login_required
+def bill(oid):
+    o = db.session.get(Order, oid)
+    return _bill_resp(o) if o else ("Not found", 404)
+
+@app.get("/bill/<int:oid>/<token>.png")
+def public_bill(oid, token):
+    o = db.session.get(Order, oid)
+    if not o or not hmac.compare_digest(token, tok("b" + str(oid))):
+        return "Not found", 404
+    return _bill_resp(o)
 
 BASE = """<meta name=viewport content="width=device-width,initial-scale=1"><style>
 :root{color-scheme:dark}body{margin:0;background:#1d0e08;color:#fbf1dc;font-family:system-ui,sans-serif}
@@ -236,10 +341,13 @@ ADMIN = """<!doctype html><title>Orders · Cyber’s</title>""" + BASE + """
 h1{margin:0;font-size:20px;color:#e8b73a}.b{background:#e8b73a;color:#2a1409!important;font-weight:700;text-decoration:none;padding:10px 16px;border-radius:99px}.b.g{background:#fbf1dc}
 .cards div{background:#2a1409;border:1px solid #5a3320;border-radius:14px;padding:12px 22px;color:#c9ad92}.cards b{display:block;font-size:26px;color:#e8b73a}
 .tw{overflow-x:auto;padding:0 20px 40px}table{border-collapse:collapse;width:100%;min-width:760px}th,td{text-align:left;padding:10px;border-bottom:1px solid #5a3320;vertical-align:top}
-th{color:#c9ad92;font-size:13px}td.i{white-space:pre-line}.b2{cursor:pointer;border:0;padding:8px 16px}dialog{background:#2a1409;color:inherit;border:1px solid #5a3320;border-radius:16px;width:min(520px,94vw);padding:16px}dialog::backdrop{background:#000a}dialog img{width:100%;border-radius:10px;display:block}.act{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}small{color:#c9ad92}.e{padding:40px;text-align:center;color:#c9ad92}</style>
+th{color:#c9ad92;font-size:13px}td.i{white-space:pre-line}.b2{cursor:pointer;border:0;padding:8px 16px}dialog{background:#2a1409;color:inherit;border:1px solid #5a3320;border-radius:16px;width:min(520px,94vw);padding:16px}dialog::backdrop{background:#000a}dialog img{width:100%;border-radius:10px;display:block}.act{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}small{color:#c9ad92}.days{display:flex;gap:8px;overflow-x:auto;padding:0 20px 14px}.days a{flex:none;border:1px solid #5a3320;border-radius:12px;padding:8px 14px;background:#2a1409;color:#fbf1dc;text-decoration:none}.days a.on{border-color:#e8b73a}.days small{display:block}.ok{color:#9be29b;padding:0 20px;margin:0}.e{padding:40px;text-align:center;color:#c9ad92}</style>
 <div class=top><h1>Cyber’s Tea Point · Orders</h1><a href=/admin/logout>Log out</a></div>
 <form class=bar method=get><input type=date name=date value="{{day}}" onchange="this.form.submit()">
 <a class=b href="/admin/export?date={{day}}">Download this day (Excel)</a><a class="b g" href="/admin/export">Download all days (Excel)</a></form>
+{% if msg %}<p class=ok>{{msg}}</p>{% endif %}
+<form class=bar method=post action="/admin/import" enctype="multipart/form-data"><label>Restore old data from Excel: <input type=file name=file accept=".xlsx" required></label><button class="b b2 g">Upload &amp; restore</button></form>
+<div class=days>{% for iso,lbl,n,r in alld %}<a href="/admin?date={{iso}}" class="{{'on' if iso==day}}">{{lbl}}<small>{{n}} orders · ₹{{r}}</small></a>{% endfor %}</div>
 <div class=cards><div><b>{{rows|length}}</b>orders</div><div><b>₹{{total}}</b>revenue</div><div><b>{{new}}</b>new</div></div>
 <div class=tw>{% if rows %}<table><tr><th>#<th>Time<th>Name<th>Phone<th>Items<th>Total<th>Status<th>Bill</tr>
 {% for o in rows %}<tr><td>{{o.id}}<td>{{o.created.strftime('%I:%M %p')}}<td>{{o.name}}<td><a href="tel:{{o.phone}}">{{o.phone}}</a>
@@ -261,7 +369,7 @@ $("wa").onclick=async()=>{
   if(!window.open(chat,"_blank"))$("msg").innerHTML+=' <a href="'+chat+'" target=_blank>Open chat</a>';
  }catch(e){if(e.name!=="AbortError")$("msg").textContent="Could not share. Use Download image."}
 };
-setTimeout(()=>{if(!$("dlg").open&&!document.activeElement.matches('select,input'))location.reload()},30000)</script>"""
+setInterval(()=>{if(!$("dlg").open&&!document.activeElement.matches('select,input')&&!document.querySelector('input[type=file]').value)location.reload()},5000)</script>"""
 
 if __name__ == "__main__":
     app.run(debug=True)

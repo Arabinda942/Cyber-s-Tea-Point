@@ -39,6 +39,7 @@ input,textarea{background:var(--card);border:1px solid var(--line);border-radius
 #msg{color:#f08a8a;min-height:22px;margin:0}
 .done{text-align:center;padding:30px 10px}.done h3{font-family:'Fraunces',serif;font-size:28px;color:var(--gold);margin:0 0 8px}
 </style>
+<script src="/profile.js" defer></script>
 </head>
 <body>
 <nav><div class="wrap"><a class="logo" href="/">Cyber’s</a><a class="back" href="/">← Back to main menu</a></div></nav>
@@ -95,7 +96,7 @@ $("go").onclick=async()=>{
     const r=await fetch(API+"/api/order",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("nm").value,phone:$("ph").value,note,items})});
     const j=await r.json().catch(()=>({error:"Server error ("+r.status+"). Please try again in a minute."}));
     if(!r.ok){err(j.error||"Something went wrong.");b.disabled=false;b.textContent="Place cake order";return}
-    $("form").innerHTML=`<div class="done"><h3>Order #${j.id} placed!</h3><p>Thank you, we’ll call you shortly to confirm your cake and the design.</p><a class="btn" href="/">Back to menu</a></div>`;
+    window.Cybers&&Cybers.done(j);$("form").innerHTML=`<div class="done"><h3>Order #${j.id} placed!</h3><p>Thank you, we’ll call you shortly to confirm your cake and the design.</p><a class="btn" href="/">Back to menu</a></div>`;
   }catch(e){err("Network error. Please try again.");b.disabled=false;b.textContent="Place cake order"}
 };
 upd();
